@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DisasterShield AI - Rescue Team Receiver Console</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --primary: #0f766e; --accent: #4f46e5; --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #64748b; --high: #ef4444; --med: #f59e0b; --blue: #0284c7; --green: #10b981; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 22px; }
+        .container { max-width: 1250px; margin: 0 auto; }
+        .header-bar { background: linear-gradient(135deg, #0f172a, #1e293b); color: white; padding: 18px 22px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .live-dot { width: 12px; height: 12px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 10px; box-shadow: 0 0 8px #10b981; }
+        h1 { font-size: 22px; margin: 0; display: flex; align-items: center; }
+        .btn-auto { background: linear-gradient(135deg, #4f46e5, #0284c7); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
+        .btn-back { background: #0f766e; color: white; padding: 9px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
+        .toast { background: #ecfdf5; border-left: 5px solid var(--green); color: #065f46; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; font-size: 14px; font-weight: 600; }
+        .toast-warn { background: #fff1f2; border-left: 5px solid #ef4444; color: #991b1b; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; font-size: 14px; font-weight: 600; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+        .stat-card { background: var(--card); padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; border-top: 4px solid var(--primary); }
+        .stat-card h3 { margin: 0 0 6px 0; font-size: 11px; color: var(--muted); text-transform: uppercase; }
+        .stat-card .num { font-size: 26px; font-weight: 800; }
+        .panel { background: var(--card); padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 18px; }
+        #map { height: 380px; width: 100%; border-radius: 8px; }
+        .mission-card { background: var(--card); border: 1px solid #e2e8f0; border-left: 6px solid var(--med); border-radius: 10px; padding: 18px; margin-bottom: 14px; display: grid; grid-template-columns: 1.7fr 1.3fr; gap: 20px; }
+        .mission-card.high-p { border-left-color: var(--high); } .mission-card.disp-p { border-left-color: var(--blue); } .mission-card.res-p { border-left-color: #94a3b8; opacity: 0.85; }
+        .badge { display: inline-block; padding: 4px 9px; border-radius: 20px; font-size: 10px; font-weight: bold; color: white; margin-left: 5px; }
+        .bg-high { background: var(--high); } .bg-med { background: var(--med); } .bg-disp { background: var(--blue); } .bg-res { background: #64748b; }
+        .district-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; margin-right: 6px; }
+        .hobli-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; background-color: #475569; margin-right: 6px; }
+        .ai-box { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 12px; margin-top: 10px; }
+        .equip-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+        .equip-pill { background: white; border: 1px solid #e0e7ff; border-radius: 6px; padding: 6px; text-align: center; font-size: 11px; }
+        .equip-pill strong { display: block; font-size: 15px; color: var(--accent); }
+        .ctrl-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; }
+        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; margin: 6px 0 10px 0; font-size: 12px; }
+        .btn-send { background: var(--primary); color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .btn-done { background: #d1fae5; color: #065f46; text-decoration: none; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; text-align: center; display: block; margin-top: 8px; }
+        .btn-gps { background: #e0f2fe; color: #0369a1; text-decoration: none; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; text-align: center; display: block; margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1><span class="live-dot"></span>DisasterShield AI - Rescue Team Receiver Console</h1>
+                <p style="color: #94a3b8; margin: 4px 0 0 22px; font-size: 13px;">Separate Rescue Portal &bull; Equipment Allocation &bull; Karnataka State Zoom</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <form action="/ai_auto_dispatch" method="POST" style="margin:0;">
+                    <button type="submit" class="btn-auto">Manual Auto-Dispatch</button>
+                </form>
+                <a href="/" class="btn-back">&larr; Command Center (Separate Link)</a>
+            </div>
+        </div>
+
+        {% if dispatched_msg %}<div class="toast">{{ dispatched_msg }}</div>{% endif %}
+        {% if error_msg %}<div class="toast-warn">⚠️ {{ error_msg }}</div>{% endif %}
+
+        <div class="stats">
+            <div class="stat-card"><h3>Incoming Queries</h3><div class="num">{{ incidents|length }}</div></div>
+            <div class="stat-card"><h3>Awaiting Dispatch</h3><div class="num" style="color:#f59e0b;">{{ incidents | selectattr('status', 'equalto', 'Pending') | list | length }}</div></div>
+            <div class="stat-card"><h3>Teams Responding</h3><div class="num" style="color:#0284c7;">{{ incidents | rejectattr('status', 'equalto', 'Pending') | rejectattr('status', 'equalto', 'Resolved') | list | length }}</div></div>
+            <div class="stat-card"><h3>Missions Completed</h3><div class="num" style="color:#10b981;">{{ incidents | selectattr('status', 'equalto', 'Resolved') | list | length }}</div></div>
+        </div>
+
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin:0; font-size:16px;">🛰️ Live District Tactical Map (Karnataka State Locked)</h2>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <div class="panel">
+            <h2 style="margin-top:0; font-size:17px;">Incoming District Emergency Queries &amp; Equipment Ledger</h2>
+            {% if incidents %}
+                {% for inc in incidents %}
+                <div class="mission-card {% if inc.status == 'Resolved' %}res-p{% elif 'Dispatched' in inc.status %}disp-p{% elif inc.severity == 'High' %}high-p{% endif %}">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <span class="district-badge" style="background: {{ district_colors.get(inc.district, '#4f46e5') }};">{{ inc.district }}</span>
+                                <span class="hobli-badge">{{ inc.hobli }}</span>
+                                <strong style="font-size:18px;">{{ inc.location }}</strong>
+                            </div>
+                            <div>
+                                <span class="badge {% if inc.severity == 'High' %}bg-high{% else %}bg-med{% endif %}">AI: {{ inc.severity | upper }}</span>
+                                <span class="badge {{ inc.pred_class }}">24h FORECAST: {{ inc.pred_score }}</span>
+                                <span class="badge {% if inc.status == 'Resolved' %}bg-res{% elif 'Dispatched' in inc.status %}bg-disp{% else %}bg-med{% endif %}">{{ inc.status | upper }}</span>
+                            </div>
+                        </div>
+                        <p style="font-size:13px; color:var(--muted); margin:6px 0;">
+                            <strong>People:</strong> {{ inc.people }} &nbsp;|&nbsp; <strong>Urgency:</strong> {{ inc.urgency }} &nbsp;|&nbsp; <strong>ETA:</strong> {{ inc.ai_plan.eta }}
+                        </p>
+                        <p style="font-size:12px; background:#f8fafc; padding:8px; border-radius:6px; margin:6px 0;">{{ inc.details }}</p>
+
+                        <div class="ai-box">
+                            <div style="font-size:11px; font-weight:bold; color:#3730a3; text-transform:uppercase;">AI Resource Allocation &amp; Equipment Required</div>
+                            <div style="font-size:12px; margin-top:4px;">{{ inc.ai_plan.advice }}</div>
+                            <div class="equip-grid">
+                                <div class="equip-pill"><strong>{{ inc.ai_plan.boats }}</strong>Boats Required</div>
+                                <div class="equip-pill"><strong>{{ inc.ai_plan.medics }}</strong>Medics / Kits</div>
+                                <div class="equip-pill"><strong>{{ inc.ai_plan.jackets }}</strong>Life Vests</div>
+                                <div class="equip-pill"><strong>{{ inc.ai_plan.ambulances }}</strong>Ambulances</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ctrl-box">
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:var(--primary);">DISTRICT BASE: {{ inc.district }}</div>
+                            <div style="font-size:11px; color:var(--muted); margin:4px 0;">Recommended: <strong style="color:var(--text);">{{ inc.ai_plan.team }}</strong></div>
+                            {% if inc.status != 'Resolved' %}
+                            <form action="/dispatch/{{ inc.id }}" method="POST">
+                                <select name="team_name">
+                                    <option value="{{ inc.ai_plan.team }}">[AI Pick] {{ inc.ai_plan.team }}</option>
+                                    <option value="NDRF Heavy Flood Rescue Boat Squadron">NDRF Heavy Flood Rescue Boat Squadron</option>
+                                    <option value="Alpha Medical Trauma Unit">Alpha Medical Trauma Unit</option>
+                                    <option value="Bravo Civil Defense Unit">Bravo Civil Defense Unit</option>
+                                </select>
+                                <button type="submit" class="btn-send">{% if 'Dispatched' in inc.status %}Update Dispatch &amp; Stock{% else %}Dispatch Instantly{% endif %}</button>
+                            </form>
+                            {% else %}
+                            <div style="background:#ecfdf5; color:#065f46; padding:10px; border-radius:6px; font-size:12px; text-align:center; margin-top:8px;"><strong>Mission Completed</strong></div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if inc.status != 'Resolved' %}
+                            <a href="/resolve/{{ inc.id }}?from=rescue" class="btn-done">Mark Mission Complete (Restock)</a>
+                            {% endif %}
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ inc.location }}" target="_blank" class="btn-gps">Open GPS Route (Google Maps)</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color:var(--muted); font-size:13px;">Waiting for incoming queries from Command Center...</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const districtColors = {{ district_colors | tojson }};
+        const incidents = {{ incidents | tojson }};
+        const serverTimeOnLoad = {{ server_time }};
+        const localTimeOnLoad = Date.now() / 1000;
+
+        const LOC_COORDS = {
+            'mysuru': [12.3051, 76.6413], 'mysore': [12.3051, 76.6413], 'jayapura': [12.2000, 76.5500], 'varuna': [12.3300, 76.7500], 'hunsur': [12.3114, 76.2923],
+            'bengaluru': [12.9716, 77.5946], 'bangalore': [12.9716, 77.5946], 'yelahanka': [13.1007, 77.5963], 'kengeri': [12.9143, 77.4848],
+            'kodagu': [12.4244, 75.7382], 'madikeri': [12.4244, 75.7382], 'virajpet': [12.2000, 75.8000], 'somwarpet': [12.6000, 75.8600],
+            'chikkamagaluru': [13.3153, 75.7754], 'chikmagalur': [13.3153, 75.7754], 'mudigere': [13.1400, 75.6300], 'sringeri': [13.4190, 75.2570],
+            'davangere': [14.4644, 75.9218], 'shivamogga': [13.9299, 75.5681], 'shimoga': [13.9299, 75.5681], 'bhadravati': [13.8400, 75.7000],
+            'dakshina kannada': [12.9141, 74.8560], 'mangaluru': [12.9141, 74.8560], 'mangalore': [12.9141, 74.8560],
+            'udupi': [13.3409, 74.7421], 'hassan': [13.0068, 76.1004], 'mandya': [12.5229, 76.8951],
+            'belagavi': [15.8497, 74.4977], 'belgaum': [15.8497, 74.4977], 'athani': [16.7200, 75.0600], 'gokak': [16.1600, 74.8300],
+            'dharwad': [15.4589, 75.0078], 'hubballi': [15.3647, 75.1240], 'kalaburagi': [17.3297, 76.8343], 'gulbarga': [17.3297, 76.8343]
+        };
+
+        function getCoords(locStr, distStr) {
+            let key = locStr.toLowerCase().trim();
+            for (let k in LOC_COORDS) {
+                if (key.includes(k)) return LOC_COORDS[k];
+            }
+            let dKey = distStr.toLowerCase().trim();
+            if (LOC_COORDS[dKey]) return LOC_COORDS[dKey];
+            return [12.3051, 76.6413];
+        }
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Esri Satellite' });
+        
+        const karnatakaBounds = L.latLngBounds([11.4, 74.0], [18.6, 78.6]);
+        const map = L.map('map', { 
+            center: [14.5204, 75.7223], 
+            zoom: 7, 
+            minZoom: 7, 
+            maxZoom: 14,
+            maxBounds: karnatakaBounds,
+            maxBoundsViscosity: 1.0,
+            layers: [satelliteLayer] 
+        });
+
+        async function fetchRoadRoute(startLat, startLon, endLat, endLon) {
+            try {
+                let url = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`;
+                let res = await fetch(url);
+                let json = await res.json();
+                if (json.code === 'Ok' && json.routes && json.routes.length > 0) {
+                    return json.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                }
+            } catch(e) {}
+            return [[startLat, startLon], [endLat, endLon]];
+        }
+
+        incidents.forEach(async (inc, index) => {
+            if (inc.status === 'Resolved') return;
+
+            let coords = getCoords(inc.location, inc.district);
+            let lat = coords[0], lon = coords[1];
+            let dColor = districtColors[inc.district] || '#4f46e5';
+
+            L.circle([lat, lon], { color: dColor, fillColor: dColor, fillOpacity: 0.15, radius: 600 }).addTo(map);
+
+            if (inc.urgency.includes("Water") || inc.urgency.includes("Flooding") || inc.severity === 'High') {
+                let radBase = inc.severity === 'High' ? 450 : 250;
+                L.circle([lat, lon], { color: '#00f6ff', fillColor: '#00d4ff', fillOpacity: 0.55, weight: 1, radius: radBase }).addTo(map);
+            }
+
+            const districtPin = L.divIcon({ className: 'custom-pin', html: `<div style="background-color: ${dColor}; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>`, iconSize: [22, 22] });
+            L.marker([lat, lon], { icon: districtPin }).addTo(map);
+
+            if (inc.status === 'Pending') {
+                let baseLat = lat - 0.25, baseLon = lon - 0.25;
+                L.polyline([[baseLat, baseLon], [lat, lon]], { color: '#ef4444', weight: 4, dashArray: '4, 4', opacity: 0.9 }).addTo(map);
+                
+                let redIcon = L.divIcon({
+                    className: 'red-countdown-icon',
+                    html: `<div style="background:#ef4444; color:white; font-size:11px; font-weight:bold; padding:4px 8px; border-radius:12px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.6); white-space:nowrap;" id="resc_cnt_${inc.id}">⏳ 60s Auto-Pilot</div>`,
+                    iconSize: [110, 30], iconAnchor: [55, 15]
+                });
+                L.marker([lat, lon], { icon: redIcon, zIndexOffset: 2000 }).addTo(map);
+
+                setInterval(() => {
+                    let now = (Date.now() / 1000) - localTimeOnLoad + serverTimeOnLoad;
+                    let created = inc.created_at || now;
+                    let left = Math.max(0, Math.ceil(60 - (now - created)));
+                    let el = document.getElementById(`resc_cnt_${inc.id}`);
+                    if (el) { el.innerHTML = `⏳ Auto-Pilot: <b>${left}s</b>`; }
+                }, 1000);
+            }
+
+            if (inc.status.includes('Dispatched')) {
+                let vEmoji = inc.status.includes('Medical') ? '🚑' : (inc.status.includes('Boat') ? '🚤' : '🚒');
+                let routeColor = inc.status.includes('Medical') ? '#ef4444' : (inc.status.includes('Boat') ? '#0284c7' : '#f59e0b');
+
+                const vIcon = L.divIcon({
+                    className: 'vehicle-icon',
+                    html: `<div style="background: #0f172a; color: white; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid ${routeColor}; box-shadow: 0 4px 14px rgba(0,0,0,0.5); font-size: 20px;">${vEmoji}</div>`,
+                    iconSize: [42, 42], iconAnchor: [21, 21]
+                });
+                
+                let startLat = lat - 0.25, startLon = lon - 0.25;
+                let roadPoints = await fetchRoadRoute(startLat, startLon, lat, lon);
+                
+                let vMarker = L.marker(roadPoints[0], { icon: vIcon, zIndexOffset: 1000 }).addTo(map);
+                let routeLine = L.polyline(roadPoints, { color: routeColor, weight: 5, opacity: 0.85 }).addTo(map);
+
+                if (index === 0 || inc.status.includes('Dispatched')) {
+                    map.flyTo([lat, lon], 10, { duration: 1.5 });
+                }
+
+                let totalPoints = roadPoints.length;
+                let animTimer = setInterval(() => {
+                    let now = (Date.now() / 1000) - localTimeOnLoad + serverTimeOnLoad;
+                    let elapsed = now - (inc.dispatched_at || serverTimeOnLoad);
+                    let driveTime = 30;
+
+                    if (elapsed < driveTime) {
+                        let progress = elapsed / driveTime;
+                        let idx = Math.min(Math.floor(progress * totalPoints), totalPoints - 1);
+                        vMarker.setLatLng(roadPoints[idx]);
+                    } else {
+                        clearInterval(animTimer);
+                        vMarker.setLatLng([lat, lon]);
+                        routeLine.setStyle({color: '#64748b', opacity: 0.3});
+                    }
+                }, 100);
+            }
+        });
+
+        document.getElementById("newsForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            fetch('/analyze_news', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ news_text: document.getElementById("news_text").value.trim() }) })
+            .then(r => r.json()).then(d => { if (d.success) window.location.href = '/'; });
+        });
+
+        document.getElementById("incidentForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            fetch('/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location: document.getElementById("manual_loc").value.trim(), people: Number(document.getElementById("manual_ppl").value), urgency: document.getElementById("manual_urg").value, details: document.getElementById("manual_det").value.trim() })
+            }).then(r => r.json()).then(d => { if (d.success) window.location.href = '/'; });
+        });
+    </script>
+</body>
+</html>

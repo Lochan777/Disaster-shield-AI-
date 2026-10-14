@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DisasterShield AI - Citizen SOS Portal</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin:0; }
+        .sos-box { background: #1e293b; border: 2px solid #ef4444; border-radius: 12px; padding: 30px; width: 400px; text-align: center; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 15px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
+        .btn-sos { background: #ef4444; color: white; padding: 14px; width: 100%; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="sos-box">
+        <h1 style="color:#ef4444; margin-top:0;">🚨 EMERGENCY SOS</h1>
+        <form action="/sos" method="POST">
+            <input type="hidden" id="location" name="location" value="Mysuru">
+            <input type="text" name="details" placeholder="Your Name / Contact" required>
+            <input type="number" name="people" value="2" required>
+            <select name="urgency"><option value="Water entering homes">Water entering homes</option><option value="Medical assistance reported">Medical Emergency</option></select>
+            <p id="gps" style="font-size:12px; color:#38bdf8;">📍 Acquiring GPS...</p>
+            <button type="submit" class="btn-sos">Broadcast SOS to Command</button>
+        </form>
+    </div>
+    <script>
+        navigator.geolocation.getCurrentPosition(
+            p => { document.getElementById("location").value = "GPS: " + p.coords.latitude.toFixed(4) + "," + p.coords.longitude.toFixed(4); document.getElementById("gps").innerHTML = "📍 GPS Locked"; document.getElementById("gps").style.color = "#10b981"; },
+            e => { document.getElementById("gps").innerHTML = "⚠️ GPS denied. Defaulting to base."; }
+        );
+    </script>
+</body>
+</html>
